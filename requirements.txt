@@ -1,0 +1,4 @@
+# Dependências Python do RAG local (busca semântica das notas).
+# Instalado dentro de .venv/ pelo install.sh.
+# Modelo usado: paraphrase-multilingual-MiniLM-L12-v2 (baixado no 1º uso).
+sentence-transformers>=2.2.0
