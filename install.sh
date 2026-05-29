@@ -46,6 +46,17 @@ check_bin() { # nome_bin  pacote_sugerido  obrigatorio(1/0)
 check_bin emacs  emacs               1
 check_bin git    git                 1
 check_bin python3 python3            1
+
+# python3 existe mas o módulo venv pode faltar (Debian/Ubuntu separam em
+# python3-venv). Sem ele, `python3 -m venv` falha com "ensurepip is not
+# available" e a instalação do RAG quebra no passo 2.
+if have python3; then
+  if python3 -c "import venv, ensurepip" >/dev/null 2>&1; then
+    printf "  $OK python3-venv\n"
+  else
+    printf "  $ERR módulo venv ausente — %s\n" "$(pkg_hint python3-venv)"; MISSING_SYS=1
+  fi
+fi
 check_bin aspell aspell              0   # corretor ortográfico (flyspell)
 check_bin cmake  cmake               0   # build do vterm
 check_bin gcc    gcc                 0   # build do vterm/pdf-tools
@@ -93,7 +104,9 @@ if have python3; then
     echo "  criando venv em .venv/ ..."
     python3 -m venv "$DOOMDIR/.venv"
   fi
-  echo "  instalando dependências (sentence-transformers — pode demorar)..."
+  echo "  instalando dependências do RAG..."
+  echo "  NOTA: sentence-transformers puxa PyTorch (~1-2 GB de download +"
+  echo "        ~3 GB em disco). Pode demorar vários minutos na 1ª vez."
   "$DOOMDIR/.venv/bin/pip" install --quiet --upgrade pip
   if "$DOOMDIR/.venv/bin/pip" install --quiet -r "$DOOMDIR/requirements.txt"; then
     printf "  $OK venv pronta\n"
