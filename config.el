@@ -140,6 +140,9 @@
      ("e" "Economia" plain "* ${title}\n\n%?"
       :if-new (file+head "economia/${slug}.org" "#+title: ${title}\n")
       :unnarrowed t)
+     ("t" "Trading" plain "* ${title}\n\n%?"
+      :if-new (file+head "trading/${slug}.org" "#+title: ${title}\n")
+      :unnarrowed t)
  ("g" "Genkidama" plain "* ${title}\n\n%?"
       :if-new (file+head "genki/${slug}.org" "#+title: ${title}\n")
       :unnarrowed t)
