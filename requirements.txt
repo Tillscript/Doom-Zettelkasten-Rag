@@ -1,4 +1,10 @@
 # Dependências Python do RAG local (busca semântica das notas).
 # Instalado dentro de .venv/ pelo install.sh.
 # Modelo usado: paraphrase-multilingual-MiniLM-L12-v2 (baixado no 1º uso).
+#
+# NOTA: o torch NÃO está listado aqui de propósito. O install.sh o instala
+# antes deste arquivo, escolhendo o build CPU-only (~200 MB) ou CUDA (~3 GB)
+# conforme detecte ou não uma GPU NVIDIA. Se instalar na mão sem GPU, use:
+#   pip install --index-url https://download.pytorch.org/whl/cpu torch
+#   pip install -r requirements.txt
 sentence-transformers>=2.2.0

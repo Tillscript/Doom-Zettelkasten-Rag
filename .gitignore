@@ -1,6 +1,7 @@
 .groqapi
 workflow-estudo-doom.md
 .venv/
+.pip-tmp/
 __pycache__/
 *.pyc
 .cache/

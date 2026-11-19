@@ -313,6 +313,25 @@ Create the file: `echo 'YOUR_KEY' > ~/.config/doom/.groqapi`. AI won't work with
 **RAG finds nothing / `SPC i s` returns empty**
 Index first with `SPC i i`. Confirm venv exists: `ls ~/.config/doom/.venv/bin/python`. If not, run `bash install.sh` again.
 
+**`[Errno 28] No space left on device` instalando as deps Python (WSL)**
+Quase sempre **não** é o disco, é o `/tmp`. O pip descompacta os wheels em
+`$TMPDIR` e no WSL o `/tmp` é `tmpfs` (RAM), normalmente 2-3 GB — o PyTorch
+sozinho estoura isso. Confirme com `df -h /tmp`. O `install.sh` já contorna
+apontando o `TMPDIR` pro disco; se instalar na mão, faça o mesmo:
+```bash
+mkdir -p ~/.config/doom/.pip-tmp
+TMPDIR=~/.config/doom/.pip-tmp ~/.config/doom/.venv/bin/pip install -r ~/.config/doom/requirements.txt
+```
+
+> Atenção ao `df -h` dentro do WSL: o `/` aparece como ~1 TB, mas isso é o
+> tamanho **máximo virtual** do `ext4.vhdx`. O espaço real disponível é o da
+> partição Windows que hospeda o arquivo — veja com `df -h /mnt/c`.
+
+**PyTorch baixando ~3 GB de bibliotecas CUDA numa máquina sem GPU**
+O wheel padrão do PyPI arrasta `nvidia-cublas`, `cudnn`, `nccl`, `triton` etc.
+Sem GPU NVIDIA nada disso é usado (os embeddings rodam em CPU). O `install.sh`
+detecta a ausência de GPU e instala o build CPU-only (~200 MB) automaticamente.
+
 **Embeddings / Python error**
 Test the script manually:
 ```bash

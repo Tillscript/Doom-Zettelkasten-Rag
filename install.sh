@@ -104,15 +104,38 @@ if have python3; then
     echo "  criando venv em .venv/ ..."
     python3 -m venv "$DOOMDIR/.venv"
   fi
-  echo "  instalando dependências do RAG..."
-  echo "  NOTA: sentence-transformers puxa PyTorch (~1-2 GB de download +"
-  echo "        ~3 GB em disco). Pode demorar vários minutos na 1ª vez."
-  "$DOOMDIR/.venv/bin/pip" install --quiet --upgrade pip
-  if "$DOOMDIR/.venv/bin/pip" install --quiet -r "$DOOMDIR/requirements.txt"; then
+  # O pip descompacta os wheels em $TMPDIR. Em muitas distros (e no WSL por
+  # padrão) /tmp é tmpfs, ou seja RAM — tipicamente 2-3 GB. O wheel do PyTorch
+  # sozinho tem ~500 MB e, com as libs CUDA, o unpack estoura o tmpfs com
+  # "[Errno 28] No space left on device" mesmo havendo dezenas de GB de disco
+  # livre. Por isso apontamos o TMPDIR pra dentro do próprio DOOMDIR.
+  PIPTMP="$DOOMDIR/.pip-tmp"
+  mkdir -p "$PIPTMP"
+  trap 'rm -rf "$PIPTMP"' EXIT
+
+  # PyTorch: por padrão o wheel do PyPI arrasta ~2,7 GB de bibliotecas CUDA
+  # (cublas, cudnn, nccl, triton...). Numa máquina sem GPU NVIDIA isso é peso
+  # morto puro: o modelo de embeddings roda em CPU. Instalamos o build CPU-only
+  # (~200 MB) antes do requirements.txt; assim o sentence-transformers encontra
+  # o torch já satisfeito e não puxa a versão CUDA.
+  if have nvidia-smi && nvidia-smi >/dev/null 2>&1; then
+    echo "  GPU NVIDIA detectada — instalando PyTorch com CUDA (~3 GB)..."
+    TORCH_INDEX=""
+  else
+    echo "  sem GPU NVIDIA — instalando PyTorch CPU-only (~200 MB)..."
+    TORCH_INDEX="--index-url https://download.pytorch.org/whl/cpu"
+  fi
+
+  echo "  instalando dependências do RAG (pode demorar vários minutos na 1ª vez)..."
+  TMPDIR="$PIPTMP" "$DOOMDIR/.venv/bin/pip" install --quiet --upgrade pip
+  # shellcheck disable=SC2086
+  if TMPDIR="$PIPTMP" "$DOOMDIR/.venv/bin/pip" install --quiet $TORCH_INDEX torch \
+     && TMPDIR="$PIPTMP" "$DOOMDIR/.venv/bin/pip" install --quiet -r "$DOOMDIR/requirements.txt"; then
     printf "  $OK venv pronta\n"
   else
     printf "  $ERR falha ao instalar dependências Python\n"; MISSING_SYS=1
   fi
+  rm -rf "$PIPTMP"; trap - EXIT
 else
   printf "  $ERR python3 ausente — pulei a venv\n"
 fi
@@ -128,6 +151,9 @@ done
 [ -f "$ORG/templates/daily-progressive.orgt" ] || \
   cp "$DOOMDIR/templates/daily-progressive.orgt" "$ORG/templates/daily-progressive.orgt"
 printf "  $OK capturas.org + template\n"
+# yasnippet avisa no boot se $DOOMDIR/snippets/ não existir (dir vazio não vai
+# pro git, então precisa ser criado aqui).
+mkdir -p "$DOOMDIR/snippets" && printf "  $OK %s\n" "$DOOMDIR/snippets"
 
 # -----------------------------------------------------------------------------
 say "4/5  Chave da API Groq (.groqapi)"
