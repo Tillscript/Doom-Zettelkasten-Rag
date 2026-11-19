@@ -83,13 +83,14 @@
 (setq org-directory "~/Documents/Org")
 (setq org-roam-directory (file-truename "~/Documents/Org/notas/"))
 
-;; Agenda — inclui subpastas automaticamente (lazy: só após org carregar)
+;; Agenda — só agenda/ e inbox/ (notas/ fica de fora: são ~150 arquivos de
+;; conhecimento sem TODO/DEADLINE, só deixariam a agenda lenta).
+;; Inclui subpastas automaticamente (lazy: só após org carregar).
 (after! org
   (setq org-agenda-files
         (append
          (directory-files-recursively "~/Documents/Org/agenda/" "\\.org$")
-         (directory-files-recursively "~/Documents/Org/inbox/" "\\.org$")
-         (directory-files-recursively "~/Documents/Org/notas/" "\\.org$"))))
+         (directory-files-recursively "~/Documents/Org/inbox/" "\\.org$"))))
 
 ;; Desliga warning do cache do org-element (bug conhecido, inofensivo)
 (after! org
@@ -167,6 +168,17 @@
         org-roam-ui-follow t
         org-roam-ui-update-on-save t
         org-roam-ui-open-on-start nil))
+
+;; Org-roam Graph (Graphviz)
+;; O SVG é gerado no /tmp do WSL; o explorer.exe precisa do caminho em
+;; formato Windows (\\wsl.localhost\...), daí a conversão via wslpath.
+(after! org-roam
+  (setq org-roam-graph-executable "/usr/bin/dot"
+        org-roam-graph-filetype "svg"
+        org-roam-graph-viewer
+        (lambda (file)
+          (call-process "explorer.exe" nil 0 nil
+                        (car (process-lines "wslpath" "-w" file))))))
 
 ;; Org-roam Keybindings
 (map! :leader
