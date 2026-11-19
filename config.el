@@ -701,3 +701,67 @@ chunks desses arquivos (não só os top-k soltos), para resumir um tópico."
 (setq doom-font (font-spec :family "JetBrains Mono" :size 14)
       doom-variable-pitch-font (font-spec :family "Cantarell" :size 15)
       doom-big-font (font-spec :family "JetBrains Mono" :size 18))
+
+
+;;; =====================================================================
+;;; Colar imagens do clipboard nas notas (org-download)
+;;; Uso: dentro de uma nota, C-S-v  ou  SPC m I
+;;; No WSL o clipboard do Windows só expõe image/bmp, então usamos o
+;;; PowerShell para salvar PNG direto; fora do WSL cai em wl-paste/xclip.
+;;; =====================================================================
+;; setq no topo (antes do pacote carregar): defcustom não sobrescreve.
+(setq org-download-image-dir (expand-file-name "imagens" org-directory)
+      org-download-heading-lvl nil
+      org-download-method 'directory
+      org-download-timestamp "%Y%m%d-%H%M%S_"
+      org-download-image-org-width 600
+      org-image-actual-width '(600)
+      org-startup-with-inline-images t)
+
+(defun my/clipboard-image-to-png (file)
+  "Salva a imagem do clipboard em FILE (PNG). Retorna t se deu certo."
+  (let ((file (expand-file-name file)))
+    (cond
+     ((executable-find "powershell.exe")
+      (call-process
+       "powershell.exe" nil nil nil "-NoProfile" "-STA" "-Command"
+       (format "Add-Type -AssemblyName System.Windows.Forms,System.Drawing; $i=[System.Windows.Forms.Clipboard]::GetImage(); if($i){$i.Save('%s',[System.Drawing.Imaging.ImageFormat]::Png)}"
+               (string-trim (shell-command-to-string
+                             (format "wslpath -w %s" (shell-quote-argument file)))))))
+     ((executable-find "wl-paste")
+      (call-process-shell-command
+       (format "wl-paste -t image/png > %s" (shell-quote-argument file))))
+     ((executable-find "xclip")
+      (call-process-shell-command
+       (format "xclip -selection clipboard -t image/png -o > %s"
+               (shell-quote-argument file)))))
+    (and (file-exists-p file)
+         (> (file-attribute-size (file-attributes file)) 0))))
+
+(defun my/org-paste-image ()
+  "Cola a imagem do clipboard como PNG em `org-download-image-dir' e insere o link."
+  (interactive)
+  (unless (derived-mode-p 'org-mode) (user-error "Só funciona em buffers Org"))
+  (let* ((dir org-download-image-dir)
+         (file (expand-file-name
+                (format-time-string "%Y%m%d-%H%M%S_clip.png") dir)))
+    (make-directory dir t)
+    (if (not (my/clipboard-image-to-png file))
+        (progn (when (file-exists-p file) (delete-file file))
+               (user-error "Não há imagem no clipboard"))
+      (unless (bolp) (insert "\n"))
+      (insert (format "#+attr_org: :width %d\n[[file:%s]]\n"
+                      org-download-image-org-width
+                      (file-relative-name file default-directory)))
+      (org-display-inline-images nil t)
+      (message "Imagem colada: %s" (file-name-nondirectory file)))))
+
+(use-package! org-download
+  :after org
+  :config
+  (add-hook 'dired-mode-hook #'org-download-enable))
+
+(map! :after org :map org-mode-map
+      "C-S-v" #'my/org-paste-image
+      :localleader
+      :desc "Colar imagem do clipboard" "I" #'my/org-paste-image)

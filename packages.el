@@ -52,6 +52,7 @@
 (package! org-roam)
 (package! websocket) ;; dependência do org-roam-ui
 (package! org-roam-ui)
+(package! org-download) ;; colar imagens do clipboard nas notas
 (package! gptel)
 
 ;; Estudo: flashcards SRS + pomodoro + EPUB
